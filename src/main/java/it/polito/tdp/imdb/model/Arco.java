@@ -9,36 +9,38 @@ package it.polito.tdp.imdb.model;
 
 public class Arco {
 	
-	private Integer actorID1;
-	private Integer actorID2;
+	private Actor actor1;
+	private Actor actor2;
 	private Integer peso;
-	public Arco(Integer actorID1, Integer actorID2,  Integer peso) {
+	
+	public Arco(Actor actor1, Actor actor2, Integer peso) {
 		super();
-		this.actorID1 = actorID1;
-		this.actorID2 = actorID2;
-		
+		this.actor1 = actor1;
+		this.actor2 = actor2;
 		this.peso = peso;
 	}
-	public Integer getActorID1() {
-		return actorID1;
+	public void setActor1(Actor actor1) {
+		this.actor1 = actor1;
 	}
-	public void setActorID1(Integer actorID1) {
-		this.actorID1 = actorID1;
+	public Actor getActor2() {
+		return actor2;
 	}
-	public Integer getActorID2() {
-		return actorID2;
+	public void setActor2(Actor actor2) {
+		this.actor2 = actor2;
 	}
-	public void setActorID2(Integer actorID2) {
-		this.actorID2 = actorID2;
-	}
-	
 	public Integer getPeso() {
 		return peso;
 	}
 	public void setPeso(Integer peso) {
 		this.peso = peso;
 	}
+	public Actor getActor1() {
+		return actor1;
+	}
+	@Override
+	public String toString() {
+		return "Arco [actor1=" + actor1 + ", actor2=" + actor2 + ", peso=" + peso + "]";
+	}
 	
 	
-
 }

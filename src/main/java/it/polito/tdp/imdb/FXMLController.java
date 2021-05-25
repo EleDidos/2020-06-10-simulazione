@@ -38,7 +38,7 @@ public class FXMLController {
     private ComboBox<String> boxGenere; // Value injected by FXMLLoader
 
     @FXML // fx:id="boxAttore"
-    private ComboBox<?> boxAttore; // Value injected by FXMLLoader
+    private ComboBox<String> boxAttore; // Value injected by FXMLLoader
 
     @FXML // fx:id="txtGiorni"
     private TextField txtGiorni; // Value injected by FXMLLoader
@@ -48,6 +48,20 @@ public class FXMLController {
 
     @FXML
     void doAttoriSimili(ActionEvent event) {
+    	if(this.model.getGraph()==null) {
+    		txtResult.appendText("Devi prima creare il GRAFO");
+    		return;
+    	}
+    	
+    	String attoreScelto="";
+    	try {
+    		attoreScelto=boxAttore.getValue();
+    	} catch(NullPointerException npe) {
+    		txtResult.setText("Scegli il nome di un attore");
+    		return;
+    	}
+    	
+    	txtResult.appendText("\nGli attori raggiungibili da "+attoreScelto+" sono:\n"+this.model.getAttoriRaggiungibili(attoreScelto));
 
     }
 
@@ -64,11 +78,29 @@ public class FXMLController {
     	
     	this.model.creaGrafo(genere);
     	
+    	txtResult.setText("Dati del GRAFO:\n#VERTICI= "+model.nVertici()+"\n#ARCHI= "+model.nArchi()+"\n");
+    	
+    	//riempio tendina attori con vertici del grafo
+    	boxAttore.getItems().addAll(this.model.getNomiAttoriVerticiString());
     }
 
     @FXML
     void doSimulazione(ActionEvent event) {
-
+    	Integer n; //giorni
+    	try {
+    		n=Integer.parseInt(txtGiorni.getText());
+    	} catch(NumberFormatException nfe) {
+    		txtResult.setText("Scegli il nome di un attore");
+    		return;
+    	}catch(NullPointerException npe) {
+    		txtResult.setText("Scegli il nome di un attore");
+    		return;
+    	}
+    	
+    	this.model.simula(n);
+    	txtResult.appendText(this.model.getDatiSimulazione());
+    	
+    	
     }
 
     @FXML // This method is called by the FXMLLoader when initialization is complete

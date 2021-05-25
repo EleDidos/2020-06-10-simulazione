@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 import it.polito.tdp.imdb.model.Actor;
+import it.polito.tdp.imdb.model.Arco;
 import it.polito.tdp.imdb.model.Director;
 import it.polito.tdp.imdb.model.Movie;
 
@@ -124,13 +125,54 @@ public class ImdbDAO {
 			st.setString(1,genere);
 			ResultSet res = st.executeQuery();
 			while (res.next()) {
-				if(!idMap.containsKey(res.getInt("actor_id"))) {
-					Actor actor = new Actor(res.getInt("actor_id"), res.getString("first_name"), res.getString("last_name"),
+				if(!idMap.containsKey(res.getInt("id"))) {
+					Actor actor = new Actor(res.getInt("id"), res.getString("first_name"), res.getString("last_name"),
 						res.getString("gender"));
-				idMap.put(res.getInt("actor_id"), actor);
+				idMap.put(res.getInt("id"), actor);
 				result.add(actor);
 				}
 			}
+			conn.close();
+			return result;
+			
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+	
+	/**
+	 * Partecipazioni congiunte di due attori a stessi film 
+	 * del genere passato come parametro
+	 * Peso = n° di film insieme
+	 */
+	public List <Arco> getArchi (String genere, Map <Integer, Actor> idMap){
+		String sql = "SELECT r1.actor_id as id1, r2.actor_id as id2, COUNT(DISTINCT r1.movie_id) as weight "
+				+ "	 FROM roles r1, roles r2, movies_genres mg "
+				+ "	WHERE r1.actor_id > r2.actor_id AND "
+				+ "	r1.movie_id = r2.movie_id AND "
+				+ "	mg.movie_id = r1.movie_id AND "
+				+ "	mg.genre = ? "
+				+ "	GROUP BY r1.actor_id, r2.actor_id";
+		List<Arco> result = new ArrayList<Arco>();
+		Connection conn = DBConnect.getConnection();
+
+		try {
+			PreparedStatement st = conn.prepareStatement(sql);
+			st.setString(1,genere);
+			ResultSet res = st.executeQuery();
+			while (res.next()) {
+				Integer i1 = res.getInt("id1");
+				Integer i2 = res.getInt("id2");
+				Actor a1 = idMap.get(i1);
+				Actor a2 = idMap.get(i2);
+				if(a1==null || a2==null) {
+					throw new RuntimeException("Problema con getArchi");
+				}
+				Arco arco = new Arco (a1,a2,res.getInt("weight"));
+				result.add(arco);
+			}
+			
 			conn.close();
 			return result;
 			
