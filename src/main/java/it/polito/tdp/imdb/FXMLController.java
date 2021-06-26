@@ -5,8 +5,13 @@
 package it.polito.tdp.imdb;
 
 import java.net.URL;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 import java.util.ResourceBundle;
 
+
+import it.polito.tdp.imdb.model.Actor;
 import it.polito.tdp.imdb.model.Model;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -38,7 +43,7 @@ public class FXMLController {
     private ComboBox<String> boxGenere; // Value injected by FXMLLoader
 
     @FXML // fx:id="boxAttore"
-    private ComboBox<String> boxAttore; // Value injected by FXMLLoader
+    private ComboBox<Actor> boxAttore; // Value injected by FXMLLoader
 
     @FXML // fx:id="txtGiorni"
     private TextField txtGiorni; // Value injected by FXMLLoader
@@ -48,57 +53,90 @@ public class FXMLController {
 
     @FXML
     void doAttoriSimili(ActionEvent event) {
-    	if(this.model.getGraph()==null) {
-    		txtResult.appendText("Devi prima creare il GRAFO");
+    	//CONTROLLA SE ESISTE GRAFO
+    	if(model.getGraph()==null) {
+    		txtResult.setText("Devi prima creare il grafo!");
     		return;
     	}
-    	
-    	String attoreScelto="";
+    	Actor scelto=null;
     	try {
-    		attoreScelto=boxAttore.getValue();
-    	} catch(NullPointerException npe) {
-    		txtResult.setText("Scegli il nome di un attore");
+    		scelto=boxAttore.getValue();
+    		if(scelto==null) {
+    			txtResult.setText("Scegli un attore");
+    			return;
+    		}
+    	}catch(NullPointerException npe) {
+    		txtResult.setText("Scegli un attore");
     		return;
     	}
-    	
-    	txtResult.appendText("\nGli attori raggiungibili da "+attoreScelto+" sono:\n"+this.model.getAttoriRaggiungibili(attoreScelto));
-
+    	List<Actor> vicini = model.getVicini(scelto);
+    	Collections.sort(vicini,new ComparatoreDiActors());
+    	txtResult.appendText("\n\nI vertici raggiungibili da quello scelto sono:\n");
+    	for(Actor a:vicini) {
+    		if(!a.equals(scelto)) //per non stampare se stesso
+    			txtResult.appendText(a+"\n");
+    	}
+    		
     }
+    
+    
+    public class ComparatoreDiActors implements Comparator <Actor>{
+		public int compare (Actor a1, Actor a2) {
+			return a1.getLastName().compareTo(a2.getLastName());
+		}
+	}
 
     @FXML
     void doCreaGrafo(ActionEvent event) {
     	txtResult.clear();
-    	String genere="";
+    	String genere=null;
+    	
     	try {
-    		genere=this.boxGenere.getValue();
+    		genere=boxGenere.getValue();
+    		if(genere==null) {
+    			txtResult.setText("Scegli un genere");
+    			return;
+    		}
     	}catch(NullPointerException npe) {
-    		txtResult.setText("Scegli il genere di un film");
+    		txtResult.setText("Scegli un genere");
     		return;
     	}
     	
-    	this.model.creaGrafo(genere);
+    	model.creaGrafo(genere);
+    	txtResult.appendText("Caratteristiche del grafo:\n#VERTICI = "+model.getNVertici()+"\n#ARCHI = "+model.getNArchi());
     	
-    	txtResult.setText("Dati del GRAFO:\n#VERTICI= "+model.nVertici()+"\n#ARCHI= "+model.nArchi()+"\n");
+    	boxAttore.getItems().addAll(model.getVertici());
     	
-    	//riempio tendina attori con vertici del grafo
-    	boxAttore.getItems().addAll(this.model.getNomiAttoriVerticiString());
     }
 
     @FXML
     void doSimulazione(ActionEvent event) {
-    	Integer n; //giorni
-    	try {
-    		n=Integer.parseInt(txtGiorni.getText());
-    	} catch(NumberFormatException nfe) {
-    		txtResult.setText("Scegli il nome di un attore");
-    		return;
-    	}catch(NullPointerException npe) {
-    		txtResult.setText("Scegli il nome di un attore");
+    	//CONTROLLA SE ESISTE GRAFO
+    	if(model.getGraph()==null) {
+    		txtResult.setText("Devi prima creare il grafo!");
     		return;
     	}
     	
-    	this.model.simula(n);
-    	txtResult.appendText(this.model.getDatiSimulazione());
+    	Integer n=0;
+    	
+    	try {
+    		n=Integer.parseInt(txtGiorni.getText());
+    		
+    	}catch(NumberFormatException nfe) {
+    		txtResult.setText("Inserisci un numero intero di giorni");
+    		return;
+    	}catch(NullPointerException npe) {
+    		txtResult.setText("Inserisci un numero intero di giorni");
+    		return;
+    	}
+    	
+    	model.simula(n);
+    	
+    	txtResult.appendText("\n\nGli attori intervistati sono:\n");
+    	for(Actor a: model.getIntervistati())
+    		txtResult.appendText(a+"\n");
+    	txtResult.appendText("\n\nI giorni di pausa sono: "+model.getPause());
+    	
     	
     	
     }
@@ -117,6 +155,8 @@ public class FXMLController {
     
     public void setModel(Model model) {
     	this.model = model;
-    	boxGenere.getItems().addAll(this.model.getGenres());
+    	List <String> generi = model.getGeneri();
+    	Collections.sort(generi);
+    	boxGenere.getItems().addAll( generi);
     }
 }

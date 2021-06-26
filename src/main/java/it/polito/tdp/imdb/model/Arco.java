@@ -1,46 +1,37 @@
 package it.polito.tdp.imdb.model;
 
-/**
- * Partecipazione di due attori agli stessi film
- * Il peso= n° di film insieme
- * @author elena
- *
- */
-
 public class Arco {
 	
-	private Actor actor1;
-	private Actor actor2;
-	private Integer peso;
-	
-	public Arco(Actor actor1, Actor actor2, Integer peso) {
-		super();
-		this.actor1 = actor1;
-		this.actor2 = actor2;
-		this.peso = peso;
+	private Actor a1;
+	private Actor a2;
+	private int peso;
+	public Actor getA1() {
+		return a1;
 	}
-	public void setActor1(Actor actor1) {
-		this.actor1 = actor1;
+	public void setA1(Actor a1) {
+		this.a1 = a1;
 	}
-	public Actor getActor2() {
-		return actor2;
+	public Actor getA2() {
+		return a2;
 	}
-	public void setActor2(Actor actor2) {
-		this.actor2 = actor2;
+	public void setA2(Actor a2) {
+		this.a2 = a2;
 	}
-	public Integer getPeso() {
+	public int getPeso() {
 		return peso;
 	}
-	public void setPeso(Integer peso) {
+	public void setPeso(int peso) {
 		this.peso = peso;
 	}
-	public Actor getActor1() {
-		return actor1;
+	public Arco(Actor a1, Actor a2, int peso) {
+		super();
+		this.a1 = a1;
+		this.a2 = a2;
+		this.peso = peso;
 	}
-	@Override
+	
 	public String toString() {
-		return "Arco [actor1=" + actor1 + ", actor2=" + actor2 + ", peso=" + peso + "]";
+		return this.a1+" - "+this.a2+" ( "+this.peso+" )";
 	}
-	
-	
+
 }

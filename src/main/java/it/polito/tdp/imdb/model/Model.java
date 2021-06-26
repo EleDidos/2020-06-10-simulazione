@@ -1,13 +1,16 @@
 package it.polito.tdp.imdb.model;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.jgrapht.Graphs;
+import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.SimpleWeightedGraph;
+import org.jgrapht.traverse.BreadthFirstIterator;
 import org.jgrapht.traverse.DepthFirstIterator;
 import org.jgrapht.traverse.GraphIterator;
 
@@ -15,103 +18,83 @@ import it.polito.tdp.imdb.db.ImdbDAO;
 
 public class Model {
 	
+	private SimpleWeightedGraph< Actor , DefaultWeightedEdge>graph;
+	private Map <Integer, Actor  > idMap;
 	private ImdbDAO dao;
-	private SimpleWeightedGraph <Actor, DefaultWeightedEdge> graph;
-	private Map <Integer, Actor> idMap;
 	private Simulatore sim;
 	
 	public Model() {
-		dao = new ImdbDAO ();
-		
-		idMap = new HashMap <Integer, Actor>();
-		
-		sim = new Simulatore();
+		idMap= new HashMap <Integer,Actor  >();
+		dao=new ImdbDAO();
 	}
 	
-
+	public void creaGrafo(String genere) {
+		graph= new SimpleWeightedGraph<>(DefaultWeightedEdge.class);
+		
+		dao.loadAllVertici(idMap, genere);
+		Graphs.addAllVertices(graph, idMap.values());
+		
+		for(Arco a : dao.listArchi(idMap,genere))
+			Graphs.addEdge(graph,a.getA1(),a.getA2(),a.getPeso());
+		
+		
+	}
 	
-	public SimpleWeightedGraph<Actor, DefaultWeightedEdge> getGraph() {
+	public Integer getNVertici() {
+		return graph.vertexSet().size();
+	}
+	
+	public Integer getNArchi() {
+		return graph.edgeSet().size();
+	}
+	
+	public List <Actor> getVertici(){
+		List <Actor> vertici = new ArrayList <Actor>();
+		for(Actor a     : graph.vertexSet())
+			vertici.add(a  );
+		Collections.sort(vertici);
+		return vertici;
+	}
+
+	public SimpleWeightedGraph< Actor , DefaultWeightedEdge> getGraph() {
 		return graph;
 	}
 
-
-
-
-	public List <String> getGenres() {
-		List <String> genres = dao.listAllGenres();
-		return genres;
+	
+	public List <String> getGeneri() {
+		
+		return dao.listAllGenres();
 	}
 
 	
-	public void creaGrafo (String genere) {
-		graph = new SimpleWeightedGraph <>(DefaultWeightedEdge.class);
+	public List<Actor> getVicini(Actor scelto) {
+		if(!graph.vertexSet().contains(scelto))
+			throw new RuntimeException("L'attore scelto non fa parte del grafo");
+		List <Actor> vicini = new ArrayList <Actor>();
 		
-		dao.getVertex(genere, idMap); //riempio IDMAP
-		Graphs.addAllVertices(graph, idMap.values());
+		//BreadthFirstIterator
+		GraphIterator<Actor,DefaultWeightedEdge> bfi = new BreadthFirstIterator <Actor,DefaultWeightedEdge> (graph,scelto);
+		while(bfi.hasNext()) 
+				vicini.add(bfi.next());
 		
-		System.out.println("VERTICI ATTORI\n");
-		for(Actor a: graph.vertexSet())
-			System.out.println(a.toString()+"\n");
-		
-		System.out.println("ARCHI \n");
-		for(Arco ai: dao.getArchi(genere, idMap)) {
-			Graphs.addEdge(graph,ai.getActor1(), ai.getActor2(), ai.getPeso());
-			System.out.println(ai+"\n");
-		}
+		return vicini;
 	}
 	
-	public int nVertici() {
-		return this.graph.vertexSet().size();
+	public void simula(Integer n) {
+		sim= new Simulatore (graph,n);
+		sim.run();
+		
 	}
 	
-	public int nArchi() {
-		return this.graph.edgeSet().size();
-	}
-	
-	public List<String> getNomiAttoriVerticiString (){
-		List <String> attoriNomi = new ArrayList <String> ();
-		for(Actor a: graph.vertexSet())
-			attoriNomi.add(a.getFirstName()+" "+a.getLastName());
-		return attoriNomi;
+	public List<Actor> getIntervistati() {
+		return sim.getIntervistati();
 	}
 
 
-
-	public String getAttoriRaggiungibili(String NC) {
-		String attoriRaggiungibili="";
-		List <Actor> reachable = new ArrayList <Actor>();
-		String e[] = NC.split(" ");
-		Actor partenza=null;
-		
-		for(Actor a: idMap.values())
-			if( a.getFirstName().equals(e[0]) && a.getLastName().equals(e[1]) )
-				partenza = a;
-		
-		GraphIterator <Actor,DefaultWeightedEdge> dfv = new DepthFirstIterator <Actor,DefaultWeightedEdge> (graph,partenza);
-		while(dfv.hasNext())
-			reachable.add(dfv.next());
-		
-		for(Actor a: reachable)
-			attoriRaggiungibili+=a.getFirstName()+" "+a.getLastName()+"\n";
-		
-		return attoriRaggiungibili;
+	public int getPause() {
+		return sim.getPause();
 	}
 	
-	
-	public void simula (Integer n) {
-		if(graph != null) {
-			sim.init(graph,n);
-			sim.run();
-		}
-	}
-	
-	public String getDatiSimulazione() {
-		String result ="";
-		result="L'intervistatore si è preso "+sim.getGGPausa()+" giorni di pausa.\n"
-				+ "Gli attori intervistati sono:\n"+sim.getIntervistati();
-				
-		return result;
-	}
 	
 
 }

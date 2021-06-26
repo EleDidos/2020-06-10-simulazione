@@ -1,6 +1,8 @@
 package it.polito.tdp.imdb.model;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
 
 import org.jgrapht.Graphs;
 import org.jgrapht.graph.DefaultWeightedEdge;
@@ -8,110 +10,139 @@ import org.jgrapht.graph.SimpleWeightedGraph;
 
 public class Simulatore {
 	
+private SimpleWeightedGraph<Actor, DefaultWeightedEdge>graph;
 	
-	private int n;
-	private int gg; //gg consecutivi di interviste
-	private int ggPausa; //gg pausa
-	private ArrayList <Actor> actors = new ArrayList <Actor>();
-	private ArrayList <Actor> intervistati = new ArrayList <Actor>();
-	private SimpleWeightedGraph<Actor, DefaultWeightedEdge> graph;
+	private List <Actor>intervistati;
+	private List <Actor>daIntervistare;
+	private int pause=0;
+	private int n;//giorni di interviste
+	private int gg=0; //gg di interviste già fatti
 	
-	public void init(SimpleWeightedGraph<Actor, DefaultWeightedEdge> graph, int n) {
+	
+	public Simulatore( SimpleWeightedGraph<Actor, DefaultWeightedEdge>graph, Integer n) {
 		this.n=n;
-		gg=0;
-		ggPausa=0;
 		this.graph=graph;
+		
+		intervistati = new ArrayList<Actor>();
+		daIntervistare = new ArrayList<Actor>();
 		for(Actor a: graph.vertexSet())
-			actors.add(a);
+			daIntervistare.add(a);
+		
+		Actor a = this.scegliCasualmente();
+		intervistati.add(a);
+		gg++;
+		
 	}
-	
-	Actor scelto;
-	double probability;
-	int random;
 	
 	public void run() {
-		//primo personaggio scelto casualmente
-		random = (int)Math.random()*actors.size();
-		Actor primo = actors.get(random);
-		intervistati.add(primo);
-		actors.remove(primo);
-		
-		//dal 2° gg in poi
+		//se gg==5 vuol dire che ha già intervistato per 5 gg
+		//se gg==4 --> deve iniziare 5° gg
 		while(gg<n) {
-			probability = Math.random();
+			double probability= Math.random();
 			
-			//60% casuale
 			if(probability<=0.6) {
-				this.casuale();
-			}//0.6 
-			else { //0.4
-				scelto = this.actorGradoMax(intervistati.get (intervistati.size()-1) );
-				
-				if(scelto==null) { //grado dell'ultimo=0 --> casuale
-					this.casuale();
-				}else {
-					intervistati.add(scelto);
-					actors.remove(scelto);
-					gg++;
-				}
-			}//0.4
+				Actor a = this.scegliCasualmente();
+				intervistati.add(a);
+				gg++;
+			} else {
+				Actor a = this.consiglio();
+				intervistati.add(a);
+				gg++;
+			} //40%
 			
-			//2 persone stesso sesso negli ultimi due gg
-			if(intervistati.get(gg-1).getGender().equals(intervistati.get(gg-2).getGender())) {
-				probability= Math.random();
-				//pausa
-				if(probability<=0.9) {
-					gg++; //per un gg non intervista
-					ggPausa++;
-					//gg dopo sceglie per forza casualmente
-					//poi riprende normale trafila di scelta
-					this.casuale();
-				} 
-				else { //casuale
-					this.casuale();
+			if(gg<n) {
+				Actor ultimo=intervistati.get(intervistati.size()-1);
+				Actor penultimo=intervistati.get(intervistati.size()-2);
+				if(ultimo.getGender().equals(penultimo.getGender())) {
+					double p=Math.random();
+					if(p<=0.9) {//pausa
+						pause++;
+						gg++; //salto un giorno
+						//gg dopo riparto casualmente
+						if(gg<n) {
+							Actor a = this.scegliCasualmente();
+							intervistati.add(a);
+							gg++;
+						}
+					}
 				}
-					
-			}//genere uguale
-				
-			
-		}//while
-		
-	}//run
-	
-	
-	public void casuale () {
-		random = (int)Math.random()*actors.size();
-		scelto = actors.get(random);
-		intervistati.add(scelto);
-		actors.remove(scelto);
-		gg++;
-	}
-	
-	
-	public Actor actorGradoMax(Actor ultimo) {
-		Double max=0.0; //film insieme
-		Actor best=null;
-		for(DefaultWeightedEdge e: graph.edgesOf(ultimo)) {
-			if(graph.getEdgeWeight(e)>max) {
-				max=graph.getEdgeWeight(e);
-				best=graph.getEdgeTarget(e);
 			}
+				
+		}//while
+	}
+		
+	
+	private Actor scegliCasualmente() {
+		int prob = (int) (Math.random()*(daIntervistare.size()));
+		Actor scelto = daIntervistare.remove(prob);
+		return scelto;
+		
+	}
+	
+	/**
+	 * attore sotto consiglio dell'ultimo intervistato
+	 * @param e
+	 */
+	public Actor  consiglio() {
+		Actor ultimo = intervistati.get(intervistati.size()-1);
+		//se non ha vicini --> casuale
+		if(Graphs.neighborListOf(graph, ultimo)==null)
+			return this.scegliCasualmente();
+		//se ha vicini
+		Actor intervistato = this.getVicinoGradoMAX(ultimo);
+		//lo tolgo da "daIntervistare"
+		for(int i=0;i<daIntervistare.size();i++){
+			if(daIntervistare.get(i).equals(intervistato))
+				daIntervistare.remove(i);
 		}
-		if(best==null) //grado di ultimo=0
-			return null;
-		return best;
+		
+		return intervistato;
+		
 	}
 	
-	
-	public int getGGPausa() {
-		return ggPausa;
+	/**
+	 * potrebbero esserci più vicini di grado max
+	 * in quel caso scelgo a caso tra loro
+	 * @param ultimo
+	 * @return
+	 */
+	private Actor getVicinoGradoMAX(Actor ultimo) {
+		double pesoMax=0.0;
+		List <Actor> max = new ArrayList <Actor>();
+		//trovo grado max
+		for(DefaultWeightedEdge e: graph.incomingEdgesOf(ultimo))
+			if(graph.getEdgeWeight(e)>pesoMax)
+				pesoMax=graph.getEdgeWeight(e);
+		//trovo tutti gli attori con quel peso
+		System.out.println("\n\nIncoming = "+graph.incomingEdgesOf(ultimo).size()+"\nOutgoing = "+graph.outgoingEdgesOf(ultimo).size());
+		for(DefaultWeightedEdge e: graph.incomingEdgesOf(ultimo))
+			if(graph.getEdgeWeight(e)==pesoMax) {
+				Actor vicino = Graphs.getOppositeVertex(graph, e, ultimo);
+				max.add(vicino);
+			}
+		System.out.println("\nN° di vicini max "+max.size());
+		//ne scelgo uno a caso tra i max
+		int p = (int) (Math.random()*(max.size()));
+		System.out.println("\n p= "+p);
+		return max.get(p);
+				
 	}
-	
-	public String getIntervistati() {
-		String intervistatiString ="";
-		for(Actor a: intervistati)
-			intervistatiString+=a.getFirstName()+" "+a.getLastName()+"\n";
-		return intervistatiString;
+
+	public List<Actor> getIntervistati() {
+		return intervistati;
 	}
+
+	
+
+	public int getPause() {
+		return pause;
+	}
+
+	
+	
+	
+	
+	
+	
 
 }
